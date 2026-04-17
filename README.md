@@ -69,6 +69,7 @@ File script tạo CSDL và dữ liệu mẫu:
 4. Execute để tạo CSDL và dữ liệu mẫu.
 
 ## 7. Cấu hình kết nối trong config.php
+### Trường hợp chạy local (khuyên dùng khi demo trên máy cá nhân)
 Mở file config.php và sửa các biến ở đầu file:
 
 - $db_server = "localhost\\SQLEXPRESS";  <- sửa theo instance máy bạn
@@ -79,13 +80,41 @@ Ví dụ:
 - Máy A: localhost\\SQLEXPRESS
 - Máy B: DESKTOP-ABC\\MSSQLSERVER01
 
-Sau khi sửa config.php, toàn bộ các trang sẽ dùng chung cấu hình mới.
+### Trường hợp deploy public (Azure App Service, máy khác)
+Không sửa code, chỉ cần cấu hình Environment Variables:
+
+- DB_SERVER
+- DB_NAME
+- DB_DRIVER
+- DB_USER
+- DB_PASSWORD
+- DB_ENCRYPT (true/false)
+- DB_TRUST_SERVER_CERT (true/false)
+
+Gợi ý cho Azure SQL:
+- DB_SERVER = your-server.database.windows.net
+- DB_NAME = quanly_thuvien
+- DB_DRIVER = ODBC Driver 18 for SQL Server
+- DB_USER = <sql_login>
+- DB_PASSWORD = <sql_password>
+- DB_ENCRYPT = true
+- DB_TRUST_SERVER_CERT = false
+
+Sau khi cấu hình, toàn bộ các trang sẽ dùng chung kết nối qua config.php.
 
 ## 8. Chạy ứng dụng
 1. Chép source vào thư mục:
    C:\\xampp\\htdocs\\quanly_thuvien
 2. Mở trình duyệt:
    http://localhost/quanly_thuvien/index.php
+
+## 8.1. Deploy public nhanh (tham khảo)
+Nếu deploy lên App Service:
+1. Tạo App Service (Windows + PHP).
+2. Deploy source từ GitHub.
+3. Vào App Service -> Configuration -> Application settings.
+4. Thêm các biến DB_* như mục 7.
+5. Restart App Service và kiểm tra website.
 
 ## 9. Push source lên GitHub
 ### Cách 1: Upload trực tiếp trên web GitHub
