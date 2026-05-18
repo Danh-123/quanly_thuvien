@@ -5,38 +5,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $maPhieuMuon = $_POST["MaPhieuMuon"];
     $ngayTraThucTe = date("Y-m-d");
 
-        $sqlGet = "SELECT CONVERT(VARCHAR(10), NgayHenTra, 23) AS NgayHenTra, MaSach FROM MuonTra WHERE MaPhieuMuon = ? AND TrangThai = N'dang_muon'";
-    $stmtGet = sqlsrv_query($conn, $sqlGet, array($maPhieuMuon));
-    $row = sqlsrv_fetch_array($stmtGet, SQLSRV_FETCH_ASSOC);
+    $resultMessage = '';
+    $sql = "{call sp_TraSach(?, ?, ?)}";
+    $params = array(
+        array($maPhieuMuon, SQLSRV_PARAM_IN),
+        array($ngayTraThucTe, SQLSRV_PARAM_IN),
+        array(&$resultMessage, SQLSRV_PARAM_OUT, SQLSRV_PHPTYPE_STRING('UTF-8'), SQLSRV_SQLTYPE_NVARCHAR(4000))
+    );
+    $stmt = sqlsrv_query($conn, $sql, $params);
 
-    if ($row) {
-        $ngayHenTra = $row['NgayHenTra'];
-        $maSach = $row['MaSach'];
-        $ngayTra = new DateTime($ngayTraThucTe);
-            $ngayHen = new DateTime($ngayHenTra);
-        $soNgayQuaHan = 0;
-        $tienPhat = 0;
-
-        if ($ngayTra > $ngayHen) {
-            $soNgayQuaHan = $ngayTra->diff($ngayHen)->days;
-            $tienPhat = $soNgayQuaHan * 5000;
-
-            $sqlPhat = "INSERT INTO Phat (MaPhieuMuon, SoNgayQuaHan, TienPhat, NgayThu) VALUES (?, ?, ?, ?)";
-            $paramsPhat = array($maPhieuMuon, $soNgayQuaHan, $tienPhat, $ngayTraThucTe);
-            sqlsrv_query($conn, $sqlPhat, $paramsPhat);
-        }
-
-        $sqlUpdate = "UPDATE MuonTra SET NgayTraThucTe = ?, TrangThai = N'da_tra' WHERE MaPhieuMuon = ?";
-        sqlsrv_query($conn, $sqlUpdate, array($ngayTraThucTe, $maPhieuMuon));
-
-        $sqlTangSach = "UPDATE Sach SET SoLuongTon = SoLuongTon + 1 WHERE MaSach = ?";
-        sqlsrv_query($conn, $sqlTangSach, array($maSach));
-
-        $thongBao = "Trả sách thành công!";
-        if ($tienPhat > 0) $thongBao .= " Quá hạn $soNgayQuaHan ngày. Tiền phạt: " . number_format($tienPhat) . " VNĐ";
-        echo "<script>alert('$thongBao'); window.location='tra.php';</script>";
+    if ($stmt) {
+        sqlsrv_free_stmt($stmt);
+        $thongBao = trim($resultMessage) !== '' ? $resultMessage : 'Trả sách thành công!';
+        echo "<script>alert('" . addslashes($thongBao) . "'); window.location='tra.php';</script>";
     } else {
-        echo "<script>alert('Phiếu mượn không hợp lệ hoặc đã trả rồi!');</script>";
+        $errors = sqlsrv_errors();
+        $thongBao = 'Phiếu mượn không hợp lệ hoặc đã trả rồi!';
+        if (!empty($errors) && isset($errors[0]['message'])) {
+            $thongBao = $errors[0]['message'];
+        }
+        echo "<script>alert('" . addslashes($thongBao) . "');</script>";
     }
 }
 

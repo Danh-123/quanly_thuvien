@@ -1,16 +1,17 @@
 <?php
 require_once 'config.php';
 
-$sql = "SELECT m.MaPhieuMuon, b.HoTen, s.TuaSach,
-    CONVERT(VARCHAR(10), m.NgayMuon, 23) AS NgayMuon,
-    CONVERT(VARCHAR(10), m.NgayHenTra, 23) AS NgayHenTra,
-        DATEDIFF(DAY, m.NgayHenTra, GETDATE()) AS SoNgayQuaHan
-        FROM MuonTra m
-        JOIN BanDoc b ON m.MaBanDoc = b.MaBanDoc
-        JOIN Sach s ON m.MaSach = s.MaSach
-        WHERE m.TrangThai = N'dang_muon'
-        ORDER BY m.NgayHenTra ASC";
+$sql = "{call sp_DanhSachDangMuon}";
 $stmt = sqlsrv_query($conn, $sql);
+
+function format_sqlsrv_date($value)
+{
+    if ($value instanceof DateTimeInterface) {
+        return $value->format('d/m/Y');
+    }
+
+    return $value;
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -34,15 +35,15 @@ $stmt = sqlsrv_query($conn, $sql);
         <th>Trạng thái</th>
     </tr>
     <?php while($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)):
-        $quaHan = $row['SoNgayQuaHan'];
+        $quaHan = isset($row['SoNgayQuaHan']) ? $row['SoNgayQuaHan'] : 0;
         $trangThai = ($quaHan > 0) ? "<span class='quaHan'>Quá hạn $quaHan ngày</span>" : "Đang mượn";
     ?>
     <tr>
         <td><?= $row['MaPhieuMuon'] ?></td>
         <td><?= $row['HoTen'] ?></td>
         <td><?= $row['TuaSach'] ?></td>
-        <td><?= $row['NgayMuon'] ?></td>
-        <td><?= $row['NgayHenTra'] ?></td>
+        <td><?= format_sqlsrv_date($row['NgayMuon']) ?></td>
+        <td><?= format_sqlsrv_date($row['NgayHenTra']) ?></td>
         <td><?= $trangThai ?></td>
     </tr>
     <?php endwhile; ?>

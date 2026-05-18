@@ -7,11 +7,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["them_sach"])) {
     $soLuongTon = $_POST["SoLuongTon"];
     $maTheLoai = $_POST["MaTheLoai"];
 
-    $sql = "INSERT INTO Sach (TuaSach, NamXuatBan, SoLuongTon, MaTheLoai) VALUES (?, ?, ?, ?)";
-    $params = array($tuaSach, $namXuatBan, $soLuongTon, $maTheLoai);
+    $resultMessage = '';
+    $sql = "{call sp_ThemSach(?, ?, ?, ?, ?)}";
+    $params = array(
+        array($tuaSach, SQLSRV_PARAM_IN),
+        array($namXuatBan, SQLSRV_PARAM_IN),
+        array($soLuongTon, SQLSRV_PARAM_IN),
+        array($maTheLoai, SQLSRV_PARAM_IN),
+        array(&$resultMessage, SQLSRV_PARAM_OUT, SQLSRV_PHPTYPE_STRING('UTF-8'), SQLSRV_SQLTYPE_NVARCHAR(4000))
+    );
     $stmt = sqlsrv_query($conn, $sql, $params);
-    if ($stmt) echo "<script>alert('Thêm sách thành công!'); window.location='sach.php';</script>";
-    else echo "<script>alert('Lỗi: Không thể thêm sách');</script>";
+    if ($stmt) {
+        sqlsrv_free_stmt($stmt);
+        $thongBao = trim($resultMessage) !== '' ? $resultMessage : 'Thêm sách thành công!';
+        echo "<script>alert('" . addslashes($thongBao) . "'); window.location='sach.php';</script>";
+    } else {
+        $errors = sqlsrv_errors();
+        $thongBao = 'Lỗi: Không thể thêm sách';
+        if (!empty($errors) && isset($errors[0]['message'])) {
+            $thongBao = $errors[0]['message'];
+        }
+        echo "<script>alert('" . addslashes($thongBao) . "');</script>";
+    }
 }
 
 $sqlSach = "SELECT s.MaSach, s.TuaSach, s.NamXuatBan, s.SoLuongTon, tl.TenTheLoai

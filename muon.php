@@ -6,17 +6,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $maSach = $_POST["MaSach"];
     $ngayMuon = date("Y-m-d");
     $ngayHenTra = date("Y-m-d", strtotime("+14 days"));
+    $resultMessage = '';
 
-    $sql = "INSERT INTO MuonTra (MaBanDoc, MaSach, NgayMuon, NgayHenTra, TrangThai) VALUES (?, ?, ?, ?, N'dang_muon')";
-    $params = array($maBanDoc, $maSach, $ngayMuon, $ngayHenTra);
+    $sql = "{call sp_MuonSach(?, ?, ?, ?, ?)}";
+    $params = array(
+        array($maBanDoc, SQLSRV_PARAM_IN),
+        array($maSach, SQLSRV_PARAM_IN),
+        array($ngayMuon, SQLSRV_PARAM_IN),
+        array($ngayHenTra, SQLSRV_PARAM_IN),
+        array(&$resultMessage, SQLSRV_PARAM_OUT, SQLSRV_PHPTYPE_STRING('UTF-8'), SQLSRV_SQLTYPE_NVARCHAR(4000))
+    );
     $stmt = sqlsrv_query($conn, $sql, $params);
 
     if ($stmt) {
-        $sqlUpdate = "UPDATE Sach SET SoLuongTon = SoLuongTon - 1 WHERE MaSach = ?";
-        sqlsrv_query($conn, $sqlUpdate, array($maSach));
-        echo "<script>alert('Mượn sách thành công! Ngày hẹn trả: $ngayHenTra'); window.location='muon.php';</script>";
+        sqlsrv_free_stmt($stmt);
+        $thongBao = trim($resultMessage) !== '' ? $resultMessage : 'Mượn sách thành công!';
+        echo "<script>alert('" . addslashes($thongBao) . "'); window.location='muon.php';</script>";
     } else {
-        echo "<script>alert('Lỗi: Không thể mượn sách');</script>";
+        $errors = sqlsrv_errors();
+        $thongBao = 'Lỗi: Không thể mượn sách';
+        if (!empty($errors) && isset($errors[0]['message'])) {
+            $thongBao = $errors[0]['message'];
+        }
+        echo "<script>alert('" . addslashes($thongBao) . "');</script>";
     }
 }
 
